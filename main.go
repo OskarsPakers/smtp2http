@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/mail"
 	"strings"
@@ -68,7 +68,7 @@ func main() {
 			jsonData.Addresses.ResentBcc = transformStdAddressToEmailAddress(msg.ResentBcc)
 
 			for _, a := range msg.Attachments {
-				data, _ := ioutil.ReadAll(a.Data)
+				data, _ := io.ReadAll(a.Data)
 				jsonData.Attachments = append(jsonData.Attachments, &EmailAttachment{
 					Filename:    a.Filename,
 					ContentType: a.ContentType,
@@ -77,7 +77,7 @@ func main() {
 			}
 
 			for _, a := range msg.EmbeddedFiles {
-				data, _ := ioutil.ReadAll(a.Data)
+				data, _ := io.ReadAll(a.Data)
 				jsonData.EmbeddedFiles = append(jsonData.EmbeddedFiles, &EmailEmbeddedFile{
 					CID:         a.CID,
 					ContentType: a.ContentType,
