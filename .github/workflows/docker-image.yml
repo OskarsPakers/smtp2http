@@ -30,4 +30,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: oskarspakers/smtp2http:${{ github.event.release.tag_name }}
+        tags: oskarspakers/smtp2http:${{ github.ref_name }}
