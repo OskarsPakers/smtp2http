@@ -30,4 +30,4 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: oskarspakers/smtp2http:${{ github.ref_name }}
+        tags: oskarspakers/smtp2http:${{ github.ref_name }},oskarspakers/smtp2http:latest
