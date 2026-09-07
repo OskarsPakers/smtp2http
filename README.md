@@ -4,13 +4,12 @@ smtp2http is a simple smtp server that resends the incoming email to the configu
 
 Dev 
 ===
-- `go mod vendor`
 - `go build`
+- `go test ./...`
 
 Dev with Docker
 ==============
 Locally :
-- `go mod vendor`
 - `docker build -f Dockerfile.dev -t smtp2http-dev .`
 - `docker run -p 25:25 smtp2http-dev --timeout.read=50 --timeout.write=50 --webhook=http://some.hook/api`
 
@@ -47,6 +46,11 @@ Native usage
 =====
 `smtp2http --listen=:25 --webhook=http://localhost:8080/api/smtp-hook`
 `smtp2http --help`
+
+Restrict which recipients are accepted with `--domain` (off by default, which
+accepts mail for any domain — don't do that on a public MX):
+
+`smtp2http --listen=:25 --domain=example.com --webhook=http://localhost:8080/api/smtp-hook`
 
 Contribution
 
