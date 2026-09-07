@@ -11,6 +11,9 @@ var (
 	flagWriteTimeout   = flag.Int("timeout.write", 5, "the write timeout in seconds")
 	flagDomain         = flag.String("domain", "", "only accept mail addressed to this domain (default: any)")
 
+	flagLogLevel  = flag.String("log.level", "info", "log level: debug, info, warn or error")
+	flagLogFormat = flag.String("log.format", "text", "log format: text or json")
+
 	// Accepted but ignored. This server has never performed SMTP AUTH; the
 	// flags exist so that pre-1.0 deployments passing them keep starting.
 	// main() warns when either is set.

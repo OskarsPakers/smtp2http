@@ -5,8 +5,9 @@ import (
 	"errors"
 	"flag"
 	"io"
-	"log"
+	"log/slog"
 	"net/mail"
+	"os"
 	"time"
 
 	"github.com/emersion/go-smtp"
@@ -21,9 +22,11 @@ func main() {
 	// not init(): flag.Parse() there also eats `go test` flags and breaks the tests
 	flag.Parse()
 
+	slog.SetDefault(newLogger(*flagLogLevel, *flagLogFormat))
+
 	if *flagAuthUSER != "" || *flagAuthPASS != "" {
-		log.Println("warning: -user/-pass are accepted for compatibility but ignored; " +
-			"this server does not authenticate senders. Restrict access with -domain and your firewall.")
+		slog.Warn("-user/-pass are accepted for compatibility but ignored; " +
+			"this server does not authenticate senders. Restrict access with -domain and your firewall")
 	}
 
 	srv := smtp.NewServer(&backend{handle: deliver})
@@ -35,28 +38,71 @@ func main() {
 	srv.AllowInsecureAuth = true
 	srv.EnableSMTPUTF8 = false
 
-	log.Fatal(listenAndServe(srv))
+	slog.Info("starting",
+		"webhook", *flagWebhook,
+		"domain_filter", domainFilter(),
+		"msglimit", *flagMaxMessageSize)
+
+	if err := listenAndServe(srv); err != nil {
+		slog.Error("server stopped", "err", err)
+		os.Exit(1)
+	}
+}
+
+// domainFilter renders -domain for the startup line, so an operator can see at
+// a glance that the default accepts mail for every domain.
+func domainFilter() string {
+	if *flagDomain == "" {
+		return "(any)"
+	}
+
+	return *flagDomain
 }
 
 // deliver POSTs one message to the webhook. Any error fails the SMTP
 // transaction so the sender retries instead of the mail being lost.
 func deliver(env *envelope) error {
+	started := time.Now()
+
+	log := slog.With(
+		"from", env.from.Address,
+		"to", env.to.Address,
+		"message_id", env.message.MessageID,
+		"spf", string(env.spf),
+	)
+
 	if !recipientAllowed(env.to.Address, *flagDomain) {
-		log.Printf("rejected %q: TO domain not allowed", env.to.Address)
+		log.Warn("rejected", "reason", "to_domain_not_allowed", "domain_filter", domainFilter())
 		return errors.New("Unauthorized TO domain")
 	}
 
+	payload := buildPayload(env)
+
 	resp, err := webhookClient.R().
 		SetHeader("Content-Type", "application/json").
-		SetBody(buildPayload(env)).
+		SetBody(payload).
 		Post(*flagWebhook)
 	if err != nil {
-		log.Println(err)
+		// Transport-level failure: the webhook was unreachable, refused the
+		// connection or timed out.
+		log.Error("rejected", "reason", "webhook_unreachable", "err", err,
+			"duration_ms", time.Since(started).Milliseconds())
+
 		return errors.New("E1: Cannot accept your message due to internal error, please report that to our engineers")
-	} else if resp.StatusCode() != 200 {
-		log.Println(resp.Status())
+	}
+
+	if resp.StatusCode() != 200 {
+		log.Error("rejected", "reason", "webhook_status", "status", resp.StatusCode(),
+			"duration_ms", time.Since(started).Milliseconds())
+
 		return errors.New("E2: Cannot accept your message due to internal error, please report that to our engineers")
 	}
+
+	log.Info("accepted",
+		"subject_len", len(env.message.Subject),
+		"attachments", len(payload.Attachments),
+		"embedded_files", len(payload.EmbeddedFiles),
+		"duration_ms", time.Since(started).Milliseconds())
 
 	return nil
 }

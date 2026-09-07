@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"net/mail"
 	"strings"
@@ -126,7 +126,7 @@ func listenAndServe(cfg *smtp.Server) error {
 		return err
 	}
 
-	log.Printf("smtp server listening on %s", ln.Addr())
+	slog.Info("listening", "addr", ln.Addr().String())
 
 	return cfg.Serve(ln)
 }

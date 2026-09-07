@@ -19,6 +19,8 @@ smtp2http --help
 | `--msglimit` | `2097152` (2 MiB) | maximum incoming message size |
 | `--timeout.read` | `5` | read timeout in seconds |
 | `--timeout.write` | `5` | write timeout in seconds |
+| `--log.level` | `info` | `debug`, `info`, `warn` or `error` |
+| `--log.format` | `text` | `text` or `json` |
 | `--user`, `--pass` | — | **deprecated, ignored.** See below. |
 
 ### Restricting recipients
@@ -42,6 +44,24 @@ in the payload, but DKIM and DMARC are not checked.
 
 Run it behind a firewall, or for appliances on a LAN that only speak SMTP. Think
 carefully before pointing an internet-facing MX at it.
+
+### Logging
+
+Structured, on stderr. Every message is logged once, as `accepted` or
+`rejected`; rejections carry a `reason` so the three causes are distinguishable:
+
+```
+level=INFO msg=accepted from=a@sender.tld to=bob@example.com message_id=... spf=none attachments=1 duration_ms=3
+level=WARN msg=rejected ... reason=to_domain_not_allowed
+level=ERROR msg=rejected ... reason=webhook_unreachable err="..."
+level=ERROR msg=rejected ... reason=webhook_status status=500
+```
+
+Subjects and bodies are never logged; `subject_len` is recorded instead.
+`--log.format=json` emits one JSON object per line.
+
+A rejected message fails the SMTP transaction, so a sending server retries
+rather than dropping the mail.
 
 ## Docker
 
