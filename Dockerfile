@@ -1,11 +1,14 @@
-FROM golang:1.25-alpine AS builder
+# --platform=$BUILDPLATFORM keeps the toolchain on the native runner arch and
+# cross-compiles to $TARGETARCH below. Pure Go (CGO_ENABLED=0) needs no QEMU.
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 WORKDIR /src
 # go.mod/go.sum first so the module cache layer survives source edits
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+ARG TARGETARCH
 ENV CGO_ENABLED=0
-RUN GOOS=linux go build -ldflags="-s -w" -o /out/smtp2http .
+RUN GOOS=linux GOARCH=$TARGETARCH go build -ldflags="-s -w" -o /out/smtp2http .
 
 FROM alpine:latest
 COPY --from=builder /out/smtp2http /usr/bin/smtp2http
