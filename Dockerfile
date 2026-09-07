@@ -8,7 +8,6 @@ ENV CGO_ENABLED=0
 RUN GOOS=linux go build -ldflags="-s -w" -o /out/smtp2http .
 
 FROM alpine:latest
-RUN apk add --no-cache ca-certificates
 COPY --from=builder /out/smtp2http /usr/bin/smtp2http
 # Runs as root because the default -listen is :smtp (port 25, privileged).
 # To drop root, bind high inside and publish 25 outside -- MX records carry no
