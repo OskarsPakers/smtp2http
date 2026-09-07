@@ -29,5 +29,5 @@ because `decodeCharset` matches a hardcoded, case-sensitive list:
 | `iso88591-nospace` | mojibake -- lookup requires `; charset=` with a space |
 | `iso885915` | mojibake -- charset never handled at all |
 
-Those three goldens are expected to change when the charset lookup is fixed.
-That diff is the point, not a regression.
+Those three goldens were regenerated when the charset lookup was fixed; the
+payload now carries correctly decoded text for all five.

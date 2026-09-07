@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/ianaindex"
 )
 
 const contentTypeMultipartMixed = "multipart/mixed"
@@ -189,25 +189,27 @@ func parseMultipartRelated(msg io.Reader, boundary string) (textBody, htmlBody s
 }
 
 func decodeCharset(content io.Reader, contentTypeWithCharset string) io.Reader {
-
-	charset := "default"
-	if strings.Contains(contentTypeWithCharset, "; charset=") {
-		split := strings.Split(contentTypeWithCharset, "; charset=")
-		charset = strings.Trim(split[1], " \"'\n\r")
+	_, params, err := mime.ParseMediaType(contentTypeWithCharset)
+	if err != nil {
+		return content
 	}
 
-	tr := content
-	if charset != "default" {
-		switch charset {
-		case "Windows-1252":
-			tr = charmap.Windows1252.NewDecoder().Reader(content)
-		case "iso-8859-1", "ISO-8859-1":
-			tr = charmap.ISO8859_1.NewDecoder().Reader(content)
-		default:
-		}
+	name := params["charset"]
+	if name == "" {
+		return content
 	}
 
-	return tr
+	// ianaindex resolves any registered charset name, case-insensitively.
+	// The previous implementation matched a hardcoded list of two names by
+	// exact case and required "; charset=" with a space, so lowercase
+	// "windows-1252", ";charset=" without the space, and everything outside
+	// ISO-8859-1 / Windows-1252 arrived undecoded.
+	enc, err := ianaindex.MIME.Encoding(name)
+	if err != nil || enc == nil {
+		return content
+	}
+
+	return enc.NewDecoder().Reader(content)
 }
 
 func parseMultipartAlternative(msg io.Reader, boundary string) (textBody, htmlBody string, embeddedFiles []EmbeddedFile, err error) {
