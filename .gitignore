@@ -5,3 +5,4 @@ vendor
 
 # go executable built file
 smtp2http
+*.exe
