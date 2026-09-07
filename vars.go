@@ -9,5 +9,11 @@ var (
 	flagMaxMessageSize = flag.Int64("msglimit", 1024*1024*2, "maximum incoming message size")
 	flagReadTimeout    = flag.Int("timeout.read", 5, "the read timeout in seconds")
 	flagWriteTimeout   = flag.Int("timeout.write", 5, "the write timeout in seconds")
-	flagDomain         = flag.String("domain", "", "domain for recieving mails")
+	flagDomain         = flag.String("domain", "", "only accept mail addressed to this domain (default: any)")
+
+	// Accepted but ignored. This server has never performed SMTP AUTH; the
+	// flags exist so that pre-1.0 deployments passing them keep starting.
+	// main() warns when either is set.
+	flagAuthUSER = flag.String("user", "", "deprecated: ignored, this server does not authenticate senders")
+	flagAuthPASS = flag.String("pass", "", "deprecated: ignored, this server does not authenticate senders")
 )

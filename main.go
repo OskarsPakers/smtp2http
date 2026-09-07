@@ -18,6 +18,11 @@ func main() {
 	// not init(): flag.Parse() there also eats `go test` flags and breaks the tests
 	flag.Parse()
 
+	if *flagAuthUSER != "" || *flagAuthPASS != "" {
+		log.Println("warning: -user/-pass are accepted for compatibility but ignored; " +
+			"this server does not authenticate senders. Restrict access with -domain and your firewall.")
+	}
+
 	cfg := smtpsrv.ServerConfig{
 		ReadTimeout:     time.Duration(*flagReadTimeout) * time.Second,
 		WriteTimeout:    time.Duration(*flagWriteTimeout) * time.Second,
