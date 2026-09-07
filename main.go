@@ -3,11 +3,11 @@ package main
 import (
 	"encoding/base64"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/mail"
-	"strings"
 	"time"
 
 	"github.com/alash3al/go-smtpsrv"
@@ -15,6 +15,9 @@ import (
 )
 
 func main() {
+	// not init(): flag.Parse() there also eats `go test` flags and breaks the tests
+	flag.Parse()
+
 	cfg := smtpsrv.ServerConfig{
 		ReadTimeout:     time.Duration(*flagReadTimeout) * time.Second,
 		WriteTimeout:    time.Duration(*flagWriteTimeout) * time.Second,
@@ -47,10 +50,8 @@ func main() {
 			jsonData.Addresses.From = transformStdAddressToEmailAddress([]*mail.Address{c.From()})[0]
 			jsonData.Addresses.To = transformStdAddressToEmailAddress([]*mail.Address{c.To()})[0]
 
-			toSplited := strings.Split(jsonData.Addresses.To.Address, "@")
-			if len(*flagDomain) > 0 && (len(toSplited) < 2 || toSplited[1] != *flagDomain) {
-				log.Println("domain not allowed")
-				log.Println(*flagDomain)
+			if !recipientAllowed(jsonData.Addresses.To.Address, *flagDomain) {
+				log.Printf("rejected %q: TO domain not allowed", jsonData.Addresses.To.Address)
 				return errors.New("Unauthorized TO domain")
 			}
 
