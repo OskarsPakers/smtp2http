@@ -57,7 +57,9 @@ level=ERROR msg=rejected ... reason=webhook_unreachable err="..."
 level=ERROR msg=rejected ... reason=webhook_status status=500
 ```
 
-Subjects and bodies are never logged; `subject_len` is recorded instead.
+Subjects and bodies are never logged; `subject_len` is recorded instead. The
+webhook URL is reduced to `scheme://host` wherever it is logged -- for most
+providers the path or query *is* the credential.
 `--log.format=json` emits one JSON object per line.
 
 A rejected message fails the SMTP transaction, so a sending server retries

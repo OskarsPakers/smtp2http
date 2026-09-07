@@ -39,7 +39,7 @@ func main() {
 	srv.EnableSMTPUTF8 = false
 
 	slog.Info("starting",
-		"webhook", *flagWebhook,
+		"webhook", redactURL(*flagWebhook),
 		"domain_filter", domainFilter(),
 		"msglimit", *flagMaxMessageSize)
 
@@ -85,7 +85,7 @@ func deliver(env *envelope) error {
 	if err != nil {
 		// Transport-level failure: the webhook was unreachable, refused the
 		// connection or timed out.
-		log.Error("rejected", "reason", "webhook_unreachable", "err", err,
+		log.Error("rejected", "reason", "webhook_unreachable", "err", redactErr(err),
 			"duration_ms", time.Since(started).Milliseconds())
 
 		return errors.New("E1: Cannot accept your message due to internal error, please report that to our engineers")

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -30,4 +32,32 @@ func newLogger(level, format string) *slog.Logger {
 	}
 
 	return slog.New(slog.NewTextHandler(os.Stderr, opts))
+}
+
+// redactURL reduces a webhook URL to scheme://host for logging.
+//
+// Everything else is withheld deliberately. For most webhook providers the
+// secret *is* the URL: Slack and Discord put the token in the path, and query
+// strings routinely carry ?key= or ?token=. Userinfo carries credentials
+// outright. The host is what an operator needs to confirm they are pointed at
+// the right place; the rest is a credential.
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "(unparseable)"
+	}
+
+	return u.Scheme + "://" + u.Host
+}
+
+// redactErr strips the URL out of a *url.Error before it reaches a log. Go
+// puts the full request URL in the error text, so logging a transport failure
+// verbatim would publish the webhook secret on every failed delivery.
+func redactErr(err error) string {
+	var uerr *url.Error
+	if errors.As(err, &uerr) {
+		return uerr.Op + " " + redactURL(uerr.URL) + ": " + uerr.Err.Error()
+	}
+
+	return err.Error()
 }
