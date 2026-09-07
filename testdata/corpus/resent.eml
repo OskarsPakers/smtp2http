@@ -1,0 +1,15 @@
+From: Alice <alice@sender.invalid>
+To: Bob <bob@example.com>
+Subject: resent headers
+Message-ID: <res-001@sender.invalid>
+Date: Mon, 02 Jan 2006 15:04:05 -0700
+References: <ref-a@sender.invalid> <ref-b@sender.invalid>
+In-Reply-To: <ref-a@sender.invalid>
+Resent-From: Eve <eve@sender.invalid>
+Resent-To: Frank <frank@example.com>
+Resent-Cc: Grace <grace@example.com>
+Resent-Date: Tue, 03 Jan 2006 15:04:05 -0700
+Resent-Message-ID: <res-resent-001@sender.invalid>
+Content-Type: text/plain; charset=utf-8
+
+resent body

@@ -1,0 +1,25 @@
+{
+  "addresses": {
+    "from": {
+      "address": "alice@sender.invalid"
+    },
+    "to": {
+      "address": "bob@example.com"
+    }
+  },
+  "body": {
+    "html": "<img src=\"cid:img1@sender.invalid\">"
+  },
+  "date": "2006-01-02 15:04:05 -0700 -0700",
+  "embedded_files": [
+    {
+      "cid": "img1@sender.invalid",
+      "content_type": "image/png",
+      "data": "iVBORw0KGgo="
+    }
+  ],
+  "id": "inl-001@sender.invalid",
+  "resent_date": "0001-01-01 00:00:00 +0000 UTC",
+  "spf": "none",
+  "subject": "inline image"
+}

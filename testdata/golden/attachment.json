@@ -1,0 +1,25 @@
+{
+  "addresses": {
+    "from": {
+      "address": "alice@sender.invalid"
+    },
+    "to": {
+      "address": "bob@example.com"
+    }
+  },
+  "attachments": [
+    {
+      "content_type": "application/pdf",
+      "data": "JVBERi0xLjQKJSVFT0Y=",
+      "filename": "doc.pdf"
+    }
+  ],
+  "body": {
+    "text": "see attached"
+  },
+  "date": "2006-01-02 15:04:05 -0700 -0700",
+  "id": "att-001@sender.invalid",
+  "resent_date": "0001-01-01 00:00:00 +0000 UTC",
+  "spf": "none",
+  "subject": "with attachment"
+}

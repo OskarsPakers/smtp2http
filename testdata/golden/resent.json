@@ -1,0 +1,42 @@
+{
+  "addresses": {
+    "from": {
+      "address": "alice@sender.invalid"
+    },
+    "in_reply_to": [
+      "ref-a@sender.invalid"
+    ],
+    "resent_cc": [
+      {
+        "address": "grace@example.com",
+        "name": "Grace"
+      }
+    ],
+    "resent_from": {
+      "address": "eve@sender.invalid",
+      "name": "Eve"
+    },
+    "resent_to": [
+      {
+        "address": "frank@example.com",
+        "name": "Frank"
+      }
+    ],
+    "to": {
+      "address": "bob@example.com"
+    }
+  },
+  "body": {
+    "text": "resent body\r"
+  },
+  "date": "2006-01-02 15:04:05 -0700 -0700",
+  "id": "res-001@sender.invalid",
+  "references": [
+    "ref-a@sender.invalid",
+    "ref-b@sender.invalid"
+  ],
+  "resent_date": "2006-01-03 15:04:05 -0700 -0700",
+  "resent_id": "res-resent-001@sender.invalid",
+  "spf": "none",
+  "subject": "resent headers"
+}

@@ -1,0 +1,34 @@
+{
+  "addresses": {
+    "cc": [
+      {
+        "address": "carol@example.com",
+        "name": "Carol"
+      },
+      {
+        "address": "dave@example.com",
+        "name": "Dave"
+      }
+    ],
+    "from": {
+      "address": "alice@sender.invalid"
+    },
+    "reply_to": [
+      {
+        "address": "noreply@sender.invalid"
+      }
+    ],
+    "to": {
+      "address": "bob@example.com"
+    }
+  },
+  "body": {
+    "html": "<p>html version</p>",
+    "text": "text version"
+  },
+  "date": "2006-01-02 15:04:05 -0700 -0700",
+  "id": "alt-001@sender.invalid",
+  "resent_date": "0001-01-01 00:00:00 +0000 UTC",
+  "spf": "none",
+  "subject": "multipart alternative"
+}

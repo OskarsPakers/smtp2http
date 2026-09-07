@@ -1,0 +1,18 @@
+From: Alice <alice@sender.invalid>
+To: Bob <bob@example.com>
+Subject: with attachment
+Message-ID: <att-001@sender.invalid>
+Date: Mon, 02 Jan 2006 15:04:05 -0700
+Content-Type: multipart/mixed; boundary="BOUND2"
+
+--BOUND2
+Content-Type: text/plain; charset=utf-8
+
+see attached
+--BOUND2
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="doc.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJSVFT0Y=
+--BOUND2--

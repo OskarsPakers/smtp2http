@@ -1,0 +1,18 @@
+From: Alice <alice@sender.invalid>
+To: Bob <bob@example.com>
+Subject: inline image
+Message-ID: <inl-001@sender.invalid>
+Date: Mon, 02 Jan 2006 15:04:05 -0700
+Content-Type: multipart/related; boundary="BOUND3"
+
+--BOUND3
+Content-Type: text/html; charset=utf-8
+
+<img src="cid:img1@sender.invalid">
+--BOUND3
+Content-Type: image/png
+Content-ID: <img1@sender.invalid>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgo=
+--BOUND3--

@@ -1,0 +1,8 @@
+From: Alice <alice@sender.invalid>
+To: Bob <bob@example.com>
+Subject: iso-8859-15 euro sign
+Message-ID: <iso15-001@sender.invalid>
+Date: Mon, 02 Jan 2006 15:04:05 -0700
+Content-Type: text/plain; charset=iso-8859-15
+
+Price: ¤ 42
