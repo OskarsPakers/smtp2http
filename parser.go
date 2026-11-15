@@ -71,7 +71,11 @@ func ParseEmail(r io.Reader) (email *Email, err error) {
 			return email, err
 		}
 
-		message, _ := io.ReadAll(newPart)
+		message, err := io.ReadAll(newPart)
+		if err != nil {
+			return email, err
+		}
+
 		email.TextBody = strings.TrimSuffix(string(message[:]), "\n")
 	case contentTypeTextHtml:
 		newPart, err := decodeContent(msg.Body, msg.Header.Get("Content-Transfer-Encoding"), msg.Header.Get("Content-Type"))
@@ -139,6 +143,11 @@ func parseMultipartRelated(msg io.Reader, boundary string, depth int) (textBody,
 		return textBody, htmlBody, embeddedFiles, errMultipartTooDeep
 	}
 
+	// Builders, not +=: appending to a string copies everything gathered so
+	// far, which made a message of many small parts quadratic to parse.
+	var text, html strings.Builder
+	defer func() { textBody, htmlBody = text.String(), html.String() }()
+
 	pmr := multipart.NewReader(msg, boundary)
 	for {
 		part, err := pmr.NextPart()
@@ -166,7 +175,7 @@ func parseMultipartRelated(msg io.Reader, boundary string, depth int) (textBody,
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			textBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			text.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 		case contentTypeTextHtml:
 			newPart, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"), part.Header.Get("Content-Type"))
 			if err != nil {
@@ -178,15 +187,15 @@ func parseMultipartRelated(msg io.Reader, boundary string, depth int) (textBody,
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			html.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 		case contentTypeMultipartAlternative:
 			tb, hb, ef, err := parseMultipartAlternative(part, params["boundary"], depth+1)
 			if err != nil {
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			htmlBody += hb
-			textBody += tb
+			html.WriteString(hb)
+			text.WriteString(tb)
 			embeddedFiles = append(embeddedFiles, ef...)
 		default:
 			if isEmbeddedFile(part) {
@@ -234,6 +243,11 @@ func parseMultipartAlternative(msg io.Reader, boundary string, depth int) (textB
 		return textBody, htmlBody, embeddedFiles, errMultipartTooDeep
 	}
 
+	// Builders, not +=: appending to a string copies everything gathered so
+	// far, which made a message of many small parts quadratic to parse.
+	var text, html strings.Builder
+	defer func() { textBody, htmlBody = text.String(), html.String() }()
+
 	pmr := multipart.NewReader(msg, boundary)
 	for {
 		part, err := pmr.NextPart()
@@ -261,7 +275,7 @@ func parseMultipartAlternative(msg io.Reader, boundary string, depth int) (textB
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			textBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			text.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 
 		case contentTypeTextHtml:
 			newPart, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"), part.Header.Get("Content-Type"))
@@ -274,7 +288,7 @@ func parseMultipartAlternative(msg io.Reader, boundary string, depth int) (textB
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			html.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 
 		case contentTypeMultipartRelated:
 			tb, hb, ef, err := parseMultipartRelated(part, params["boundary"], depth+1)
@@ -282,8 +296,8 @@ func parseMultipartAlternative(msg io.Reader, boundary string, depth int) (textB
 				return textBody, htmlBody, embeddedFiles, err
 			}
 
-			htmlBody += hb
-			textBody += tb
+			html.WriteString(hb)
+			text.WriteString(tb)
 			embeddedFiles = append(embeddedFiles, ef...)
 
 		default:
@@ -304,6 +318,9 @@ func parseMultipartAlternative(msg io.Reader, boundary string, depth int) (textB
 }
 
 func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody string, attachments []Attachment, embeddedFiles []EmbeddedFile, err error) {
+	var text, html strings.Builder
+	defer func() { textBody, htmlBody = text.String(), html.String() }()
+
 	mr := multipart.NewReader(msg, boundary)
 	for {
 		part, err := mr.NextPart()
@@ -319,15 +336,29 @@ func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody str
 		}
 
 		if contentType == contentTypeMultipartAlternative {
-			textBody, htmlBody, embeddedFiles, err = parseMultipartAlternative(part, params["boundary"], 2)
+			tb, hb, ef, err := parseMultipartAlternative(part, params["boundary"], 2)
 			if err != nil {
 				return textBody, htmlBody, attachments, embeddedFiles, err
 			}
+
+			// Replaces what came before, as it always has.
+			text.Reset()
+			text.WriteString(tb)
+			html.Reset()
+			html.WriteString(hb)
+			embeddedFiles = ef
 		} else if contentType == contentTypeMultipartRelated {
-			textBody, htmlBody, embeddedFiles, err = parseMultipartRelated(part, params["boundary"], 2)
+			tb, hb, ef, err := parseMultipartRelated(part, params["boundary"], 2)
 			if err != nil {
 				return textBody, htmlBody, attachments, embeddedFiles, err
 			}
+
+			// Replaces what came before, as it always has.
+			text.Reset()
+			text.WriteString(tb)
+			html.Reset()
+			html.WriteString(hb)
+			embeddedFiles = ef
 		} else if contentType == contentTypeTextPlain {
 			newPart, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"), part.Header.Get("Content-Type"))
 			if err != nil {
@@ -339,7 +370,7 @@ func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody str
 				return textBody, htmlBody, attachments, embeddedFiles, err
 			}
 
-			textBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			text.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 		} else if contentType == contentTypeTextHtml {
 			newPart, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"), part.Header.Get("Content-Type"))
 			if err != nil {
@@ -351,7 +382,7 @@ func parseMultipartMixed(msg io.Reader, boundary string) (textBody, htmlBody str
 				return textBody, htmlBody, attachments, embeddedFiles, err
 			}
 
-			htmlBody += strings.TrimSuffix(string(ppContent[:]), "\n")
+			html.WriteString(strings.TrimSuffix(string(ppContent[:]), "\n"))
 		} else if isAttachment(part) {
 			at, err := decodeAttachment(part)
 			if err != nil {
@@ -415,11 +446,53 @@ func decodeEmbeddedFile(part *multipart.Part) (ef EmbeddedFile, err error) {
 		return
 	}
 
+	data, err := readDecoded(decoded)
+	if err != nil {
+		return
+	}
+
 	ef.CID = strings.Trim(cid, "<>")
-	ef.Data = decoded
+	ef.Data = data
 	ef.ContentType = part.Header.Get("Content-Type")
 
 	return
+}
+
+// readDecoded reads a part to the end and returns the plain bytes. Keeping the
+// charset decoder itself would pin its two 4 KiB buffers for every part until
+// the message is delivered -- over a hundred times the size of a message made
+// of many empty parts.
+func readDecoded(r io.Reader) (io.Reader, error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewReader(b), nil
+}
+
+// baseFilename reduces a decoded attachment name to a bare file name. The
+// standard library does this for the raw parameter, but an RFC 2047 encoded
+// word is only decoded afterwards and can bring "../", an absolute path or
+// control characters back in.
+func baseFilename(name string) string {
+	name = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+
+		return r
+	}, name)
+
+	if i := strings.LastIndexAny(name, `/\`); i >= 0 {
+		name = name[i+1:]
+	}
+
+	if name == "." || name == ".." {
+		return ""
+	}
+
+	return name
 }
 
 func isAttachment(part *multipart.Part) bool {
@@ -427,14 +500,19 @@ func isAttachment(part *multipart.Part) bool {
 }
 
 func decodeAttachment(part *multipart.Part) (at Attachment, err error) {
-	filename := decodeMimeSentence(part.FileName())
+	filename := baseFilename(decodeMimeSentence(part.FileName()))
 	decoded, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"), part.Header.Get("Content-Type"))
 	if err != nil {
 		return
 	}
 
+	data, err := readDecoded(decoded)
+	if err != nil {
+		return
+	}
+
 	at.Filename = filename
-	at.Data = decoded
+	at.Data = data
 	at.ContentType = strings.Split(part.Header.Get("Content-Type"), ";")[0]
 
 	return
@@ -464,16 +542,16 @@ func decodeContent(content io.Reader, encoding string, contentTypeWithCharset st
 
 		return decodeCharset(bytes.NewReader(b), contentTypeWithCharset), nil
 
-	case "7bit", "8bit", "binary":
+	// No encoding header means 7bit. Read it here like the others: a reader
+	// left over the live message would hide a failed transfer from the caller
+	// and, for a multipart part, be drained before anyone reads it.
+	case "", "7bit", "8bit", "binary":
 		dd, err := io.ReadAll(content)
 		if err != nil {
 			return nil, err
 		}
 
 		return decodeCharset(bytes.NewReader(dd), contentTypeWithCharset), nil
-
-	case "":
-		return decodeCharset(content, contentTypeWithCharset), nil
 
 	default:
 		return nil, fmt.Errorf("unknown encoding: %s", encoding)

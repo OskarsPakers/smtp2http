@@ -34,7 +34,13 @@ smtp2http --listen=:25 --domain=example.com --webhook=http://localhost:8080/api/
 ```
 
 The comparison is case-insensitive. Subdomains do not match — `--domain=example.com`
-rejects `user@mail.example.com`.
+rejects `user@mail.example.com`. The filter answers at `RCPT TO`, before the
+message is transferred.
+
+Envelope addresses must be plain ASCII `local@domain` mailboxes. Comments,
+display names and quoted local parts are refused with `553`, and so is the
+empty sender (`MAIL FROM:<>`, used by bounces) with `550`: the SPF verdict, the
+filter and the payload all have to describe the same address.
 
 ### A note on authentication
 
@@ -49,11 +55,12 @@ carefully before pointing an internet-facing MX at it.
 ### Logging
 
 Structured, on stderr. Every message is logged once, as `accepted` or
-`rejected`; rejections carry a `reason` so the three causes are distinguishable:
+`rejected`; rejections carry a `reason` so the causes are distinguishable:
 
 ```
 level=INFO msg=accepted from=a@sender.tld to=bob@example.com message_id=... spf=none attachments=1 duration_ms=3
 level=WARN msg=rejected ... reason=to_domain_not_allowed
+level=WARN msg=rejected ... reason=unreadable_message err="..."
 level=ERROR msg=rejected ... reason=webhook_unreachable err="..."
 level=ERROR msg=rejected ... reason=webhook_status status=500
 ```
@@ -68,8 +75,15 @@ How a rejection is answered depends on whose fault it is:
 | Cause | SMTP reply | Sender's behaviour |
 |---|---|---|
 | webhook unreachable, or answered anything but `200` | `451 4.3.0` | keeps the mail queued and retries |
+| transfer stalled or broke off | `451 4.4.2` | keeps the mail queued and retries |
 | recipient outside `--domain` | `550 5.7.1` | bounces |
+| message larger than `--msglimit` | `552 5.3.4` | bounces |
+| malformed envelope address | `553 5.1.3` | bounces |
 | message cannot be parsed | `554 5.6.0` | bounces |
+
+Redirects from the webhook are not followed: a `3xx` counts as "anything but
+`200`". Following one would hand the webhook URL to the redirect target in the
+`Referer` header. If your endpoint moved, update `--webhook`.
 
 So a webhook outage or a deploy of the receiving application delays mail
 instead of losing it. Up to 1.1.1 all three were a permanent `554`.

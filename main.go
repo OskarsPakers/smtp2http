@@ -5,6 +5,7 @@ import (
 	"flag"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/mail"
 	"os"
 	"time"
@@ -15,7 +16,15 @@ import (
 
 // One client for the process, not one per message: resty.New() per delivery
 // threw away connection reuse to the webhook.
-var webhookClient = resty.New()
+//
+// Redirects are never followed. The mail goes to the configured webhook and
+// nowhere else: a followed redirect sends the webhook URL -- usually a
+// credential -- to the new origin in the Referer header, and turns a 301/302
+// into a body-less GET whose 200 would acknowledge mail nobody received. A 3xx
+// is returned as the response instead and handled as any other non-200.
+var webhookClient = resty.New().SetRedirectPolicy(resty.RedirectPolicyFunc(
+	func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+))
 
 func main() {
 	// not init(): flag.Parse() there also eats `go test` flags and breaks the tests
