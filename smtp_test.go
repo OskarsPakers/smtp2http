@@ -16,7 +16,7 @@ import (
 
 // startServer runs the real SMTP backend on a loopback port and points the
 // webhook flag at hook for the duration of the test.
-func startServer(t *testing.T, hook http.HandlerFunc, domain string) string {
+func startServer(t *testing.T, hook http.HandlerFunc, domain string, opts ...func(*gosmtp.Server)) string {
 	t.Helper()
 
 	webhook := httptest.NewServer(hook)
@@ -35,6 +35,10 @@ func startServer(t *testing.T, hook http.HandlerFunc, domain string) string {
 	srv.Domain = "test"
 	srv.MaxRecipients = 1
 	srv.AllowInsecureAuth = true
+
+	for _, opt := range opts {
+		opt(srv)
+	}
 
 	go func() { _ = srv.Serve(ln) }()
 	t.Cleanup(func() { _ = srv.Close() })
@@ -57,8 +61,9 @@ func send(t *testing.T, addr, to, raw string) error {
 		t.Fatal(err)
 	}
 
+	// The -domain filter answers at RCPT, before any message is sent.
 	if err := c.Rcpt(to); err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	w, err := c.Data()
